@@ -13,6 +13,7 @@ class User(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
+    roles = db.relationship("Role", backref=db.backref("roles", uselist=False))
+   
     def __repr__(self):
         return '<User {}>'.format(self.username)
