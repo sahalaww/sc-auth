@@ -42,3 +42,8 @@ def index():
 def run_test():
     """test """
     pytest.main(["-s", "tests"])
+
+@app.cli.command()
+def seed_role():
+   """Seed user roles """
+   Role.generate_default_roles()
