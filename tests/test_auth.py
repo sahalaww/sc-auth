@@ -171,3 +171,12 @@ def test_register_login_use_token_logout(client):
     rv = profile(client, headers)
     assert b'revoked' in rv.data
     assert rv.status_code == 401
+
+def test_login_user_not_found(client):
+    payload = {
+        'username': 'test_user0',
+        'password': 'pass1234',
+    }
+    rv = login(client, json.dumps(payload))
+    assert b'user not' in rv.data
+    assert rv.status_code == 422
