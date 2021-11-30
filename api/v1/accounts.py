@@ -1,4 +1,3 @@
-from warnings import resetwarnings
 from flask.helpers import make_response
 from main import app, db, jwt
 from models.users import User
@@ -96,9 +95,19 @@ def login():
         UserLoginSchema().load(request.json)
         username = request.json['username']
         password = request.json['password']
-        user_login = User.query.filter_by(username=username).one()
-        check = check_password_hash(user_login.password, password)
+        user_login = User.query.filter_by(username=username).first()
 
+        if not user_login:
+            response = {
+                'status': 'fail',
+                'code': 422,
+                'data': {
+                    'error': 'user not found'
+                }
+            }
+            return make_response(jsonify(response), 422)
+        
+        check = check_password_hash(user_login.password, password)
         if check:
             access_token = create_access_token(identity=user_login.uuid)
             refresh_token = create_refresh_token(identity=user_login.uuid)
