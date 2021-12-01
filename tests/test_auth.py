@@ -300,3 +300,72 @@ def test_admin_add_new_user(client):
         headers=headers
     )
     assert b'fail' in rv.data
+
+def test_admin_delete_user(client):
+    payload = {
+        'username': 'adminok',
+        'password': 'admin33'
+    }
+
+    rv = login(client, json.dumps(payload))
+
+    access_token = json.loads(rv.data)['data']['access_token']
+    access_token = 'Bearer ' + access_token  
+    assert b'ok' in rv.data
+    assert rv.status_code == 200
+    
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': access_token
+    }
+
+    # insert new user
+    role_admin_id = Role.query.filter_by(name='User').first().id
+    username ='test_delete'
+    password = generate_password_hash('admin33')
+    uuid_user = uuid.uuid4().hex
+
+    create_admin = User(
+        uuid=uuid_user,
+        username=username,
+        password=password,
+        email='delete@email.com',
+        name='delete',
+        role_id=role_admin_id
+    )
+    db.session.add(create_admin)
+    db.session.commit()
+
+    assert create_admin.username == username
+    
+    # delete ok
+    payload = {
+        'uuid': uuid_user
+    }
+
+    rv = client.delete(
+        '/api/v1/users',
+        data=json.dumps(payload),
+        headers=headers
+    )
+    assert b'ok' in rv.data
+
+    # delete fail
+    rv = client.delete(
+        '/api/v1/users',
+        data=json.dumps(payload),
+        headers=headers
+    )
+    assert b'fail' in rv.data
+
+     # delete fail
+    payload = {
+        'uuid': '0'
+    }
+
+    rv = client.delete(
+        '/api/v1/users',
+        data=json.dumps(payload),
+        headers=headers
+    )
+    assert b'fail' in rv.data
