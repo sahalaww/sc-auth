@@ -192,7 +192,7 @@ def refresh_token():
  
 @app.route('/api/v1/users', methods=['GET', 'POST', 'DELETE'])
 @admin_required()
-def users():
+def users(uuid=None):
     if request.method == 'GET':
         users = User.query.all()
         users_json = UsersResponse(many=True).dump(users)
@@ -219,7 +219,41 @@ def users():
                 }
             }
         return make_response(jsonify(response), response['code'])
+    
+    elif request.method == 'DELETE':
+        uuid_user = request.json['uuid']
+        if uuid_user == None:
+            response = {
+                'status': 'fail',
+                'code': 422,
+                'data': {
+                    'error': 'uuid null'
+                }
+            }
+            return make_response(jsonify(response), response['code'])
+        else:
+            try:
+                user = User.query.filter_by(uuid=uuid_user).one()
+               
+                db.session.delete(user)
+                db.session.commit()
+                response = {
+                    'status': 'ok',
+                    'code': 200,
+                }
+                return make_response(jsonify(response), response['code'])
 
+            except Exception as err:
+                response = {
+                    'status': 'fail',
+                    'code': 500,
+                    'data': {
+                        'error': 'server error/invalid data'
+                    }
+                }
+                return make_response(jsonify(response), response['code'])
+
+        
 @jwt.user_lookup_loader
 def user_loader_callback(jwt_headers, jwt_payload):
     identity = jwt_payload["sub"]
