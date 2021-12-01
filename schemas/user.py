@@ -1,3 +1,4 @@
+import uuid
 from marshmallow import Schema, fields, validate
 from main import app
 
@@ -21,3 +22,8 @@ class UsersResponse(Schema):
     username = fields.Str()
     email = fields.Email()
     role_id = fields.Int()
+
+class UserUpdateSchema(Schema):
+    uuid = fields.Str(required=True)
+    name = fields.Str()
+    password = fields.Str()

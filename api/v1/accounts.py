@@ -7,7 +7,8 @@ from schemas.user import (
     UserRegisterSchema,
     UserLoginSchema,
     UsersResponse,
-    UserRegisterAdminSchema
+    UserRegisterAdminSchema,
+    UserUpdateSchema,
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound     
@@ -190,9 +191,9 @@ def refresh_token():
     add_token_to_database(access_token, app.config["JWT_IDENTITY_CLAIM"])
     return make_response(jsonify(response), 200)
  
-@app.route('/api/v1/users', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/v1/users', methods=['GET', 'POST', 'DELETE', 'PATCH'])
 @admin_required()
-def users(uuid=None):
+def users():
     if request.method == 'GET':
         users = User.query.all()
         users_json = UsersResponse(many=True).dump(users)
@@ -252,8 +253,45 @@ def users(uuid=None):
                     }
                 }
                 return make_response(jsonify(response), response['code'])
+    
+    elif request.method == 'PATCH':
+        try:
+            UserUpdateSchema().load(request.json)
+            uuid_user = request.json['uuid']
+            try:
+                update_user = User.query.filter_by(uuid=uuid_user).first()
+            
+                if 'name' in request.json:
+                    update_user.name = request.json['name']
 
-        
+                if 'password' in request.json:
+                    update_user.password = generate_password_hash(request.json['password'])
+                
+                db.session.commit()
+                response = {
+                    'status': 'ok',
+                    'code': 200,
+                }
+                return make_response(jsonify(response), response['code'])
+                
+            except Exception as err:
+                response = {
+                    'status': 'fail',
+                    'code': 500,
+                    'data': {
+                        'error': 'server error/invalid data'
+                    }
+                }
+                return make_response(jsonify(response), response['code'])
+        except ValidationError as err:
+            response = {
+                'status': 'fail',
+                'code': 422,
+                'data': {
+                    'error': err.messages
+                }
+            }
+            return make_response(jsonify(response), response['code'])
 @jwt.user_lookup_loader
 def user_loader_callback(jwt_headers, jwt_payload):
     identity = jwt_payload["sub"]
