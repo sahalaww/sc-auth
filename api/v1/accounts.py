@@ -161,6 +161,21 @@ def me():
     }
     return make_response(jsonify(response), 200) 
 
+@app.route('/api/v1/accounts/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh_token():
+    current_user = get_jwt_identity()
+    access_token = create_access_token(identity=current_user)
+    response = {
+        'status': 'ok',
+        'code': 200,
+        'data': {
+            'access_token': access_token
+        }
+    }
+    add_token_to_database(access_token, app.config["JWT_IDENTITY_CLAIM"])
+    return make_response(jsonify(response), 200)
+ 
 @jwt.user_lookup_loader
 def user_loader_callback(jwt_headers, jwt_payload):
     identity = jwt_payload["sub"]

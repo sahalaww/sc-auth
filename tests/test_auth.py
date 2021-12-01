@@ -8,7 +8,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def client():
     app.config["TESTING"] = True
     db.create_all()
@@ -47,8 +47,15 @@ def profile(client, token):
         '/api/v1/accounts/me',
         headers=token,
     )
+
+def refresh_token(client, token):
+    return client.post(
+        '/api/v1/accounts/refresh',
+        headers=token,
+    )
+
 def test_env():
-    assert os.environ.get('ENV') == 'testing'
+    assert os.environ.get('CONFIG_ENV') == 'config.TestConfig'
 
 
 def test_index(client):
@@ -66,17 +73,7 @@ def test_register(client):
     assert b'ok' in rv.data
     assert rv.status_code == 201
 
-def test_register_and_login(client):
-    payload = {
-        'username': 'test_user',
-        'password': 'pass1234',
-        'email': 'test_user@email.com',
-        'name': 'test_user'
-    }
-    rv = register(client, json.dumps(payload))
-    assert b'ok' in rv.data
-    assert rv.status_code == 201
-    
+def test_login_success(client):
     payload  = {
         'username':'test_user',
         'password': 'pass1234',
@@ -85,17 +82,7 @@ def test_register_and_login(client):
     assert b"ok" in rv.data
     assert rv.status_code == 200    
 
-def test_register_and_login_fails(client):
-    payload = {
-        'username': 'test_user',
-        'password': 'pass1234',
-        'email': 'test_user@email.com',
-        'name': 'test_user'
-    }
-    rv = register(client, json.dumps(payload))
-    assert b'ok' in rv.data
-    assert rv.status_code == 201
-    
+def test_login_fails(client):
     payload  = {
         'username':'test_user',
         'password': 'pass12343',
@@ -111,10 +98,7 @@ def test_register_duplicate(client):
         'email': 'test_user@email.com',
         'name': 'test_user'
     }
-    rv = register(client, json.dumps(payload))
-    assert b'ok' in rv.data
-    assert rv.status_code == 201
-   
+
     rv = register(client, json.dumps(payload))
     assert b"fail" in rv.data
     assert rv.status_code == 409    
@@ -129,18 +113,7 @@ def test_register_incompleted_data(client):
     assert b'fail' in rv.data
     assert rv.status_code == 422
 
-def test_register_login_use_token_logout(client):
-    # register
-    payload = {
-        'username': 'test_user',
-        'password': 'pass1234',
-        'email': 'test_user@email.com',
-        'name': 'test_user'
-    }
-    rv = register(client, json.dumps(payload))
-    assert b'ok' in rv.data
-    assert rv.status_code == 201
-
+def test__login_use_token_logout(client):
     # login
     payload = {
         'username': 'test_user',
@@ -180,3 +153,26 @@ def test_login_user_not_found(client):
     rv = login(client, json.dumps(payload))
     assert b'user not' in rv.data
     assert rv.status_code == 422
+
+def test_refresh_token(client):
+    # login
+    payload = {
+        'username': 'test_user',
+        'password': 'pass1234',
+    }
+
+    rv = login(client, json.dumps(payload))
+    ref_token = json.loads(rv.data)['data']['refresh_token']
+
+    assert b'ok' in rv.data
+    assert rv.status_code == 200
+    # create refresh_token from prev login
+    ref_token = 'Bearer ' + ref_token    
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': ref_token
+    }
+    
+    rv = refresh_token(client, headers)
+    assert b'token' in rv.data
+    assert rv.status_code == 200
