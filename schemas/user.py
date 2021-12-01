@@ -1,4 +1,5 @@
 from marshmallow import Schema, fields, validate
+from main import app
 
 class UserSchema(Schema):
     username = fields.Str(validate=validate.Length(min=3), required=True)
@@ -10,3 +11,13 @@ class UserRegisterSchema(UserSchema):
 
 class UserLoginSchema(UserSchema):
     password = fields.Str(required=True)
+
+class UserRegisterAdminSchema(UserRegisterSchema):
+   role_name = fields.Str(required=True)
+
+class UsersResponse(Schema):
+    uuid = fields.Str()
+    name = fields.Str()
+    username = fields.Str()
+    email = fields.Email()
+    role_id = fields.Int()

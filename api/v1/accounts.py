@@ -3,81 +3,98 @@ from main import app, db, jwt
 from models.users import User
 from models.roles import Role
 from flask import request, jsonify
-from schemas.user import UserRegisterSchema, UserLoginSchema
-from sqlalchemy.exc import IntegrityError
+from schemas.user import (
+    UserRegisterSchema,
+    UserLoginSchema,
+    UsersResponse,
+    UserRegisterAdminSchema
+)
+from sqlalchemy.exc import IntegrityError       
 from werkzeug.security import generate_password_hash, check_password_hash
 from .utils import (
     add_token_to_database, 
     revoke_token, 
-    is_token_revoked
+    is_token_revoked,
+    is_admin,
+    admin_required
 )
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
     jwt_required,
     get_jwt_identity,
-    get_jwt,
+    get_jwt
 )
 from marshmallow import ValidationError
 import uuid
+
+def insert_user_data(data,role_name):
+    try:
+        role = Role.query.filter_by(name=role_name).first()
+        new_user = User(username = data['username'],
+            uuid = uuid.uuid4().hex,
+            email = data['email'],
+            name = data['name'],
+            role_id = role.id,
+            password = generate_password_hash(data['password']),
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        response = {
+            'status': 'ok',
+            'code': 201
+        }
+    
+    except AssertionError as err_assertion:
+        db.session.rollback()
+        response = {
+            'status': 'fail',
+            'code': 400,
+            'data': {
+                'error': err_assertion 
+            }
+        }
+
+    except IntegrityError as err_integrity:
+        db.session.rollback()
+        error_info = err_integrity.orig.args
+        response = {
+            'status': 'fail',
+            'code': 409,
+            'data': {
+                'error': error_info[0]
+            }
+        }
+
+    except Exception as err_exception:
+        db.session.rollback()
+        response = {
+            'status': 'fail',
+            'code': 500,
+            'data': {
+                'error': err_exception
+            }
+        }
+    except TypeError as err:
+        db.session.rollback()
+        response = {
+            'status': 'fail',
+            'code': 500,
+            'data': {
+                'error': err
+            }
+        }
+    return response
 
 @app.route('/api/v1/accounts/register', methods=['POST'])
 def register():
     data = request.json
     try:
-        UserRegisterSchema().load(request.json)
-        try:
-            role = Role.query.filter_by(name='User').first()
-            new_user = User(username = data['username'],
-                uuid = uuid.uuid4().hex,
-                email = data['email'],
-                name = data['name'],
-                role_id = role.id,
-                password = generate_password_hash(data['password']),
-            )
-            db.session.add(new_user)
-            db.session.commit()
-            response = {
-                'status': 'ok',
-                'code': 201
-            }
-            
-            return make_response(jsonify(response), 201)
-        
-        except AssertionError as err_assertion:
-            db.session.rollback()
-            response = {
-                'status': 'fail',
-                'code': 400,
-                'data': {
-                    'error': err_assertion 
-                }
-            }
-            return make_response(jsonify(response), 400)
+        UserRegisterSchema().load(data)
+        response = insert_user_data(data, 'User')
 
-        except IntegrityError as err_integrity:
-            db.session.rollback()
-            error_info = err_integrity.orig.args
-            response = {
-                'status': 'fail',
-                'code': 409,
-                'data': {
-                    'error': error_info[0]
-                }
-            }
-            return make_response(jsonify(response), 409)
-
-        except Exception as err_exception:
-            db.session.rollback()
-            response = {
-                'status': 'fail',
-                'code': 500,
-                'data': {
-                    'error': err_exception
-                }
-            }
-            return make_response(jsonify(response), 500)
-
+        return make_response(jsonify(response), response['code'])
+    
     except ValidationError as err_validation:
         response = {
             'status': 'fail',
@@ -86,7 +103,7 @@ def register():
                 'error': err_validation.messages
             }
         }
-        return make_response(jsonify(response), 422)
+    return make_response(jsonify(response), response['code'])
 
 
 @app.route('/api/v1/accounts/login', methods=['POST'])
@@ -133,7 +150,14 @@ def login():
             return make_response(jsonify(response), 422)
         
     except ValidationError as er:
-        return make_response(jsonify(status='fail',data=er.messages))        
+        response = {
+            'status': 'fail',
+            'code': 422,
+            'data': {
+                'error': er.messages
+            }
+        }
+        return make_response(jsonify(response), 422)        
 
 @app.route('/api/v1/accounts/logout', methods=['DELETE'])
 @jwt_required()
@@ -152,12 +176,11 @@ def logout():
 @jwt_required()
 def me():
     user_identity = get_jwt_identity()
+    user_data = User.query.filter_by(uuid=user_identity).first()
     response = {
         'status': 'ok',
         'code': 200,
-        'data': {
-            'user_identity': user_identity
-        }
+        'data': UsersResponse().dump(user_data)
     }
     return make_response(jsonify(response), 200) 
 
@@ -176,6 +199,19 @@ def refresh_token():
     add_token_to_database(access_token, app.config["JWT_IDENTITY_CLAIM"])
     return make_response(jsonify(response), 200)
  
+@app.route('/api/v1/users', methods=['GET','POST', 'DELETE'])
+@admin_required()
+def users():
+    if request.method == 'GET':
+        users = User.query.all()
+        users_json = UsersResponse(many=True).dump(users)
+        response = {
+            'status': 'ok',
+            'code': 200,
+            'data': users_json
+        }
+        return make_response(jsonify(response), 200)
+
 @jwt.user_lookup_loader
 def user_loader_callback(jwt_headers, jwt_payload):
     identity = jwt_payload["sub"]
@@ -196,7 +232,7 @@ def expired_token_callback(jwt_headers, jwt_payload):
     }), 401)
 
 @jwt.expired_token_loader
-def my_expired_token_callback():
+def my_expired_token_callback(jwt_header, jwt_payload):
     return make_response(jsonify({
         'status': 'fail',
         'code': 401,
