@@ -407,9 +407,10 @@ def test_admin_update_user(client):
 
     assert create_admin.username == username
 
+    new_name = 'uniqueunix'
     payload = {
         'uuid': uuid_user,
-        'name': 'uniqueunix'
+        'name': new_name
     }
 
     rv = client.patch(
@@ -426,4 +427,4 @@ def test_admin_update_user(client):
         headers=headers
     )
 
-    assert payload['name'] in rv.data
+    assert b'uniqueunix' in rv.data
