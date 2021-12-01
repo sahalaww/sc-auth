@@ -251,3 +251,52 @@ def test_only_admin(client):
         headers=headers
     )
     assert b'fail' in rv.data
+
+def test_admin_add_new_user(client):
+    payload = {
+        'username': 'adminok',
+        'password': 'admin33'
+    }
+
+    rv = login(client, json.dumps(payload))
+
+    access_token = json.loads(rv.data)['data']['access_token']
+
+    assert b'ok' in rv.data
+    assert rv.status_code == 200
+
+    access_token = 'Bearer ' + access_token    
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': access_token
+    }
+    
+    payload = {
+        'username': 'test_register_user',
+        'password': 'pass1234',
+        'email': 'test_register_user@email.com',
+        'name': 'test_user',
+        'role_name': 'Admin'
+    }
+
+    rv = client.post(
+        '/api/v1/users',
+        data=json.dumps(payload),
+        headers=headers
+    )
+    assert b'ok' in rv.data
+
+    payload = {
+        'username': 'test_register_user1',
+        'password': 'pass1234',
+        'email': 'test_register_user1@email.com',
+        'name': 'test_user',
+        'role_name': 'okokok'
+    }
+
+    rv = client.post(
+        '/api/v1/users',
+        data=json.dumps(payload),
+        headers=headers
+    )
+    assert b'fail' in rv.data
