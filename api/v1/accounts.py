@@ -9,13 +9,13 @@ from schemas.user import (
     UsersResponse,
     UserRegisterAdminSchema
 )
-from sqlalchemy.exc import IntegrityError       
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound     
 from werkzeug.security import generate_password_hash, check_password_hash
 from .utils import (
     add_token_to_database, 
     revoke_token, 
     is_token_revoked,
-    is_admin,
     admin_required
 )
 from flask_jwt_extended import (
@@ -72,16 +72,7 @@ def insert_user_data(data,role_name):
             'status': 'fail',
             'code': 500,
             'data': {
-                'error': err_exception
-            }
-        }
-    except TypeError as err:
-        db.session.rollback()
-        response = {
-            'status': 'fail',
-            'code': 500,
-            'data': {
-                'error': err
+                'error': 'server error/invalid data'
             }
         }
     return response
@@ -199,7 +190,7 @@ def refresh_token():
     add_token_to_database(access_token, app.config["JWT_IDENTITY_CLAIM"])
     return make_response(jsonify(response), 200)
  
-@app.route('/api/v1/users', methods=['GET','POST', 'DELETE'])
+@app.route('/api/v1/users', methods=['GET', 'POST', 'DELETE'])
 @admin_required()
 def users():
     if request.method == 'GET':
@@ -211,6 +202,23 @@ def users():
             'data': users_json
         }
         return make_response(jsonify(response), 200)
+    
+    elif request.method == 'POST':
+        data = request.json
+        try:
+            UserRegisterAdminSchema().load(data)
+            response = insert_user_data(data, data['role_name'])
+            return make_response(jsonify(response), response['code'])
+        
+        except ValidationError as er:
+            response = {
+                'status': 'fail',
+                'code': 422,
+                'data': {
+                    'error': er.messages
+                }
+            }
+        return make_response(jsonify(response), response['code'])
 
 @jwt.user_lookup_loader
 def user_loader_callback(jwt_headers, jwt_payload):
