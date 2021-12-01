@@ -1,8 +1,12 @@
 import pytest
 import json
 import os
+
+from werkzeug.security import generate_password_hash
 from main import app, db
 from models.roles import Role
+from models.users import User
+import uuid 
 
 headers = {
     'Content-Type': 'application/json'
@@ -134,7 +138,7 @@ def test__login_use_token_logout(client):
     }
 
     rv = profile(client, headers)
-    assert b'user_identity' in rv.data
+    assert b'ok' in rv.data
 
     # logout
     rv = logout(client, headers)
@@ -176,3 +180,74 @@ def test_refresh_token(client):
     rv = refresh_token(client, headers)
     assert b'token' in rv.data
     assert rv.status_code == 200
+
+def test_create_admin():
+    role_admin_id = Role.query.filter_by(name='Admin').first().id
+    username ='adminok'
+    password = generate_password_hash('admin33')
+
+    create_admin = User(
+        uuid=uuid.uuid4().hex,
+        username=username,
+        password=password,
+        email='admin@email.com',
+        name='admin',
+        role_id=role_admin_id
+    )
+    db.session.add(create_admin)
+    db.session.commit()
+
+    assert create_admin.username == username
+
+def test_only_admin(client):
+    # admin login
+    payload = {
+        'username': 'adminok',
+        'password': 'admin33'
+    }
+
+    rv = login(client, json.dumps(payload))
+
+    access_token = json.loads(rv.data)['data']['access_token']
+
+    assert b'ok' in rv.data
+    assert rv.status_code == 200
+
+    # admin access
+    access_token = 'Bearer ' + access_token    
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': access_token
+    }
+    
+    rv = client.get(
+        '/api/v1/users',
+        headers=headers
+    )
+    assert b'ok' in rv.data
+
+    # non admin login
+    payload = {
+        'username': 'test_user',
+        'password': 'pass1234'
+    }
+
+    rv = login(client, json.dumps(payload))
+
+    access_token = json.loads(rv.data)['data']['access_token']
+
+    assert b'ok' in rv.data
+    assert rv.status_code == 200
+    
+    # non admin access
+    access_token = 'Bearer ' + access_token    
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': access_token
+    }
+    
+    rv = client.get(
+        '/api/v1/users',
+        headers=headers
+    )
+    assert b'fail' in rv.data
