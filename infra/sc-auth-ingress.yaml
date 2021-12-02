@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sc-auth-ingress
+  namespace: sc-auth
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  defaultBackend:
+    service:
+      name: sc-auth-svc
+      port:
+        number: 8000
+  rules:
+    - host: sc-auth.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sc-auth-svc
+                port:
+                  number: 8000
