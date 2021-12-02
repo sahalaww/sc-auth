@@ -25,7 +25,7 @@ from models.tokens import Token
 
 from api.v1.accounts import *
 
-version = "0.2"
+version = "0.2.1"
 
 @app.route('/')
 def index():
