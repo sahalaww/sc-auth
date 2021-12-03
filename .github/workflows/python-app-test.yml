@@ -1,7 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: Python application
+name: Python application test
 
 on:
   push:
@@ -23,8 +20,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -r requirements.txt
     - name: Create .env file
       run: |
         cat << EOF > .env
@@ -36,8 +32,9 @@ jobs:
         SECRET_KEY=${{ secrets.SECRET_KEY }}
         CONFIG_ENV=${{ secrets.CONFIG_ENV }}
         EOF
-    - name: Flask init db
+    - name: DB preparation
       run: |
+        export FLASK_APP=main.py
         flask db init
         flask db migrate
         flask db upgrade

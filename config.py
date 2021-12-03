@@ -19,11 +19,6 @@ class TestConfig(BaseConfig):
     DEBUG = True
     DEVELOPMENT= True
     TESTING = True
-    # DB_HOST = os.environ.get('DB_HOST') 
-    # DB_USER = os.environ.get('DB_USER') 
-    # DB_PASS = os.environ.get('DB_PASS')
-    # DB_NAME = os.environ.get('DB_NAME_TEST')
-    # SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}'.format(DB_USER,DB_PASS,DB_HOST,DB_NAME) 
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'test_app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 
@@ -34,5 +29,4 @@ class ProductionConfig(BaseConfig):
     DB_USER = os.environ.get('DB_USER') 
     DB_PASS = os.environ.get('DB_PASS')
     DB_NAME = os.environ.get('DB_NAME')
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}'.format(DB_USER,DB_PASS,DB_HOST,DB_NAME) 
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}'.format(DB_USER,DB_PASS,DB_HOST,DB_NAME)

@@ -25,7 +25,7 @@ from models.tokens import Token
 
 from api.v1.accounts import *
 
-version = "0.1"
+version = "0.2.2"
 
 @app.route('/')
 def index():
@@ -100,6 +100,7 @@ def run_test():
     pytest.main(["-s", "tests"])
 
 @app.cli.command()
-def seed_role():
-   """Seed user roles """
+def seed_default_data():
+   """Seed default roles & users"""
    Role.generate_default_roles()
+   User.generate_default_users()
