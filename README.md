@@ -7,6 +7,7 @@
 Diagram diatas merupakan flow user dari internet menuju ingress hingga mencapai pod. Ingress sebenarnya adalah resource pada Kubernetes yang digunakan untuk mengexpose service ke dunia luar (internet) melalui konfigurasi host dan path untuk masing-masing service. Dari service tersebut akan meneruskan ke pod, dimana pada pod terdapat aplikasi sc-auth yang berjalan.
 
 ![flow](images/flow.png)
+
 Saat user berhasil login, maka user akan mendapatkan `access_token` dan `refresh_token` yang digunakan untuk mengakses resource yang ada di aplikasi seperti profile dan menambahkan user baru melalui API `users` jika memiliki previleges `Admin`.
 
 ### Struktur Folder
@@ -65,15 +66,15 @@ Keterangan folder:
 
 ![db](images/db.png)
 
-Terdapat 4 buah tabel utama yang digunakan pada pada aplikasi ini, yaitu users, roles, tokens dan alembic_version. 
+Terdapat 4 buah tabel utama yang digunakan pada pada aplikasi ini, yaitu `users`, `roles`, `tokens` dan `alembic_version`. 
 
-Tabel users digunakan untuk menampung data users dengan identifier yang unique pada kolom `id, uuid, email dan username`. Agar users diketahui rolesnya terdapat kolom `role_id` yang mengarah pada tabel `roles`. Isi dari `role_id` berupa integer dengan nilai yang mereferensikan `id` dari table `roles` 
+Tabel `users` digunakan untuk menampung data users dengan identifier yang unique pada kolom `id, uuid, email dan username`. Agar users diketahui rolesnya terdapat kolom `role_id` yang mengarah pada tabel `roles`. Isi dari `role_id` berupa integer dengan nilai yang mereferensikan `id` dari table `roles` 
 
-Tabel roles berperan dalam hal identifikasi role apa saja yang ada di sisi tabel `users`. Dalam kasus ini terdapat 2 roles yaitu `Admin` dan `User`. `Admin` berperan sebagai hak akses yang memanage aplikasi secara menyeluruh, sedangkan `User` hanya bisa memiliki peran standard tanpa bisa mengakases endpoint dengan privilege `Admin`.
+Tabel `roles` berperan dalam hal identifikasi role apa saja yang ada di sisi tabel `users`. Dalam kasus ini terdapat 2 roles yaitu `Admin` dan `User`. `Admin` berperan sebagai hak akses yang memanage aplikasi secara menyeluruh, sedangkan `User` hanya bisa memiliki peran standard tanpa bisa mengakases endpoint dengan privilege `Admin`.
 
-Tabel tokens digunakan untuk tracking token yang di generate saat login dan di revoke saat logout. Sehingga ketika user melakukan logout token akan dihapus aksesnya.
+Tabel `tokens` digunakan untuk tracking token yang di generate saat login dan di revoke saat logout. Sehingga ketika user melakukan logout token akan dihapus aksesnya.
 
-Sedangkan tabel alembic_version digunakan untuk tracking migrations dari proses pembuatan/perubahan struktur tabel.
+Sedangkan tabel `alembic_version` digunakan untuk tracking migrations dari proses pembuatan/perubahan struktur tabel.
 
 ## Deployment
 
