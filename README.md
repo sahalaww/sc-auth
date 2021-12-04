@@ -6,12 +6,14 @@
 
 Diagram diatas merupakan flow user dari internet menuju ingress hingga mencapai pod. Ingress sebenarnya adalah resource pada Kubernetes yang digunakan untuk mengexpose service ke dunia luar (internet) melalui konfigurasi host dan path untuk masing-masing service. Dari service tersebut akan meneruskan ke pod, dimana pada pod terdapat aplikasi sc-auth yang berjalan.
 
-Saat user berhasil login, maka user akan mendapatkan `access_token` dan `refresh_token` yang digunakan untuk mengakses resource yang ada di aplikasi seperti profile dan menambah user (admin).
+![flow](images/flow.png)
+Saat user berhasil login, maka user akan mendapatkan `access_token` dan `refresh_token` yang digunakan untuk mengakses resource yang ada di aplikasi seperti profile dan menambahkan user baru melalui API `users` jika memiliki previleges `Admin`.
 
 ### Struktur Folder
 
 ```
-── api
+.
+├── api
 │   └── v1
 │       └── accounts.py
 ├── app.db
@@ -192,8 +194,8 @@ flask seed-default-data
 cd infra
 ./apply.sh
 ```
-Pada script diatas akan membuat namespace bernama `sc-auth`, deployment `sc-auth` dengan jumlah replica 2 buah. Lalu terdapat resource `sc-auth-secret` yang digunakan pada deployment untuk menyimpan environment variable sebagai config database MySQL. 
-Kemudian terdapat 
+Pada script diatas akan membuat namespace bernama `sc-auth`, deployment `sc-auth` dengan jumlah replica 2 buah dan terdapat limit resource sebesar `500m` untuk CPU, `128Mi` untuk memory. Lalu terdapat resource `sc-auth-secret` yang digunakan pada deployment untuk menyimpan environment variable sebagai config database MySQL. 
+Kemudian terdapat resource `ingress` yang digunakan untuk mengexpose `sc-auth-svc` ke dunia luar agar dapat diakses melalui internet.
 
 7. Cek ingress dengan `kubectl get ing -n sc-auth`
 ```bash
